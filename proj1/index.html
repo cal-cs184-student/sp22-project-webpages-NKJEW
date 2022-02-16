@@ -1,7 +1,223 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 1 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+</style>
+<title>CS 184 Rasterizer</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body>
+
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2018</h1>
+<h1 align="middle">Project 1: Rasterizer</h1>
+<h2 align="middle">Nathan Jew, Nicholas Nolte</h2>
+
+<br>
+
+<div>
+
+<h2 align="middle">Overview</h2>
+<p>Give a high-level overview of what you implemented in this project. Think about what you've built as a whole. Share your thoughts on what interesting things you've learned from completing the project.</p>
+
+<h2 align="middle">Section I: Rasterization</h2>
+
+<h3 align="middle">Part 1: Rasterizing single-color triangles</h3>
+
+First, we find the bounding box of the given triangle by using the max/min x and y coordinates. This ensures that we don't sample the entire frame buffer. Then, we iterate  through all of the pixels in the bounding box and color them if the center of the pixel is inside of the triangle. To determine this, we compare the vector between the point and each vertex of the triangle with the normal vectors of the triangle edges, and check if the signs of the dot products are the same. This accounts for winding in either direction.
+
+<div align="middle"><img src="images/part1.png" align="middle" width="400px"/></div>
+
+<!-- <p>Here is an example 2x2 gridlike structure using an HTML table. Each <b>tr</b> is a row and each <b>td</b> is a column in that row. You might find this useful for framing and showing your result images in an organized fashion.</p> -->
+<!--
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/image1.png" align="middle" width="400px"/>
+        <figcaption align="middle">Caption goes here.</figcaption>
+      </td>
+      <td>
+        <img src="images/image2.png" align="middle" width="400px"/>
+        <figcaption align="middle">Caption goes here.</figcaption>
+      </td>
+    </tr>
+    <br>
+    <tr>
+      <td>
+        <img src="images/image3.png" align="middle" width="400px"/>
+        <figcaption align="middle">Caption goes here.</figcaption>
+      </td>
+      <td>
+        <img src="images/image4.png" align="middle" width="400px"/>
+        <figcaption align="middle">Caption goes here.</figcaption>
+      </td>
+    </tr>
+  </table>
+</div> -->
+
+
+<h3 align="middle">Part 2: Antialiasing triangles</h3>
+In order to perform supersampling we treat the image as a larger one, scaled by sqrt(sampling rate) in both directions.  We store the sampled pixels of this image in the framebuffer, which is just a vector of colors, whose length is equal to the number of pixels in the expanded image.  When we write the final image, we essentially scale down this larger image by averaging "squares" of pixels that are the size of the sample rate.  This produces softer edges on the triangles in the final drawing, and reduces aliasing by appxorimating how much of each triangle is in each pixel, rather than just doing a binary check.  We still used the bounding box technique and interiority check, but we scale up all coordinate points (in the input space) to match the new expanded space.
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/part2s1.png" align="middle" width="400px"/>
+        <figcaption align="middle">No supersampling.</figcaption>
+      </td>
+      <td>
+        <img src="images/part2s2.png" align="middle" width="400px"/>
+        <figcaption align="middle">Supersampling at sample rate 4.</figcaption>
+      </td>
+    </tr>
+    <br>
+    <tr>
+      <td>
+        <img src="images/part2s3.png" align="middle" width="400px"/>
+        <figcaption align="middle">Supersampling at sample rate 9.</figcaption>
+      </td>
+      <td>
+        <img src="images/part2s4.png" align="middle" width="400px"/>
+        <figcaption align="middle">Supersampling at sample rate 16.</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<br>
+
+As an aside, in our original approach, we tried downsampling each "square" of pixels as we were iterating, rather than at the end when resolving the framebuffer to the screen.  We thought that this would reduce memory costs, since the frmaebuffer would not have to be larger for a higher sampling rate.  However, this resulted in there being white lines on the edges of triangles, because this on-the-fly averaging could not properly take into account two triangles occupying the same square.  We considered methods which involved averaging the colors of adjacent triangles, however, this still resulted in artifacts and inaccurate coloring, because whenever we were averaging, we were losing information about the "location" of where the color was concentrated.  Thus, we concluded that we could not resolve the framebuffer until after all triangles had been rasterized.
+
+<br>
+<br>
+
+A route we also explored was using jitter sampling, although in the end the code ended up getting deleted.  The idea of jittersampling was to avoid supersampling in a uniform grid as way to reduce certain artifacts.  I tried following along with the example outlined in https://graphics.pixar.com/library/MultiJitteredSampling/paper.pdf.  One issue I initially ran into was that I generated the random jitters for each triangle, due to this randomness on the edges between two triangles single points would be left out, if a sample point jittered outside of each triangle due to randomness.  To fix this I precomputed one jitter so it could be consistently applied to each triangle and this fixed the gaps.  This still seemed to me like it would produce artifacts since the same jitter was being used everywhere, and I considered precomputing a jitter separately for each pixel, but this seemed to memory intensive to be correct.  Unfortunately in a mad rush of debugging I deleted all my work on this and didn't have time to reimplement it, but I still wanted to talk about it here since it was a fun endeavour.
+
+<h3 align="middle">Part 3: Transforms</h3>
+<div align="middle"><img src="images/part3robot.png" align="middle" width="400px"/></div>
+
+<br>
+For our robot, we tried adding textures from the existing files, including eyes on the face. We also tried to orient the arms in such a way that they were evenly distributed around the head, while also attempting to retain some semblance of its cubemanity. Finally, we made the body slightly thinner because otherwise the arms were inside of it.
+
+
+<h2 align="middle">Section II: Sampling</h2>
+
+<h3 align="middle">Part 4: Barycentric coordinates</h3>
+Barycentric coordinates are a way of mapping the interior of a triangle to a new "normalized" space represented by three values: alpha, beta, and gamma. This is useful because Barycentric coordinates behave consistently regardless of the shape or size of the triangle, in that the sum of the three values is always 1 (and consequently each individual value ranges from 0 to 1). Furthermore, each value has a well-defined meaning: namely, alpha represents how close a point is to vertex 'A', beta for vertex 'B', and gamma for vertex 'C'.
+
+This can be seen clearly in this demonstration:
+<div align="middle"><img src="images/part4bary.png" align="middle" width="400px"/></div>
+
+<br>
+
+Each triangle has the same colors inside of it, even though they are oriented and shaped differently. In this case, Barycentric coordinates are being used to map colors to each point inside of the triangle, and as such, each triangle has a magenta corner, a yellow corner, and a cyan corner. The rest of the colors are the result of combining some combination of the three colors based on how far they are from the associated vertices.
+
+<br>
+<br>
+
+Additionally, here is that same methodology applied to many triangles, in a circle (test7):
+
+<div align="middle"><img src="images/part4test7.png" align="middle" width="400px"/></div>
+
+
+<h3 align="middle">Part 5: "Pixel sampling" for texture mapping</h3>
+Pixel sampling is where we take the uv coordinate of a point, and sample the corresponding texture at that location.  Nearest does this by sampling the single closest pixel of the texture and taking that color.  Bilinear finds the 4 nearest pixels, and takes a weighted average of each of their colors weighted by distance to the sampled coordinates uv.
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/nearest_1.png" align="middle" width="400px"/>
+        <figcaption align="middle">Nearest pixel sampling, supersampling rate 1.</figcaption>
+      </td>
+      <td>
+        <img src="images/bilinear_1.png" align="middle" width="400px"/>
+        <figcaption align="middle">Bilinear pixel sampling, supersampling rate 1.</figcaption>
+      </td>
+    </tr>
+    <br>
+    <tr>
+      <td>
+        <img src="images/nearest_16.png" align="middle" width="400px"/>
+        <figcaption align="middle">Nearest pixel sampling, supersampling rate 16.</figcaption>
+      </td>
+      <td>
+        <img src="images/bilinear_16.png" align="middle" width="400px"/>
+        <figcaption align="middle">Bilinear pixel sampling, supersampling rate 16.</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+The bilinear pixel sampling method is clearer in both cases, but  it is most noticeable when the supersampling rate is only one.  At higher supersampling rates, using nearest sampling becomes more valid as the rasterized triangles have natural blur on the edges.
+
+
+<h3 align="middle">Part 6: "Level sampling" with mipmaps for texture mapping</h3>
+In level sampling we use a precomputed set of lower res versions of a texture to speed up computation during rendering.  This can also have the effect of aliasing, as the lower res images are naturally blurred.
+<br>
+<br>
+Bilinear pixel sampling is slower computationally but generally produces smoother images in the center of textures.  Nearest is more efficient, and potentially applicable when the texture is very small/low res.
+<br>
+<br>
+Level sampling reduces aliasing, but requires less computation power since the mipmaps are precomputed.  More antialiasing than bilinear, as it samples a blurred image to begin with.
+<br>
+<br>
+Number of samples per pixel greatly increases the clarity of edges, but provides less blur than level sampling, as more supersampling just accurately sample the default texture.  This method is also very computationally expensive, going linearly with super_sampling rate or quadratically with the edge size of the supersample grid.
+
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/part6nothing.png" align="middle" width="400px"/>
+        <figcaption align="middle">Default settings (Nearest pixel sampling, level 0 mipmap, no supersampling).</figcaption>
+      </td>
+      <td>
+        <img src="images/part6bilinearpixel.png" align="middle" width="400px"/>
+        <figcaption align="middle">Bilinear pixel sampling, supersampling rate 1.</figcaption>
+      </td>
+    </tr>
+    <br>
+    <tr>
+      <td>
+        <img src="images/part6bilinearmip.png" align="middle" width="400px"/>
+        <figcaption align="middle">Using linear mipmap selection.</figcaption>
+      </td>
+      <td>
+        <img src="images/part6maxpixelsampling.png" align="middle" width="400px"/>
+        <figcaption align="middle">Supersampling rate 16.</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<br>
+<br>
+Here we can see that mipmapping blurs the image the most, while bilinear pixel sampling and supersampling slightly reudce the jagged edges at the center of the figure.
+
+
+
+
+<h2 align="middle">Section III: Art Competition</h2>
+<p>If you are not participating in the optional art competition, don't worry about this section!</p>
+
+<h3 align="middle">Part 7: Draw something interesting!</h3>
+
+</body>
 </html>
