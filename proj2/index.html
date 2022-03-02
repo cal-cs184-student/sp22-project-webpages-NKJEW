@@ -1,7 +1,328 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 2 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<head>
+  <style>
+    body {
+      padding: 100px;
+      width: 1000px;
+      margin: auto;
+      text-align: left;
+      font-weight: 300;
+      font-family: 'Open Sans', sans-serif;
+      color: #121212;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+      font-family: 'Source Sans Pro', sans-serif;
+    }
+  </style>
+  <title>CS 184 Mesh Editor</title>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body>
+
+  <h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2020</h1>
+  <h1 align="middle">Project 2: Mesh Editor</h1>
+  <h2 align="middle">Nathaniel Jew, Nicholas Nolte</h2>
+
+  <br><br>
+
+  <div>
+
+    <h2 align="middle">Overview</h2>
+    <p>Give a high-level overview of what you implemented in this project. Think about what you've built as a whole.
+      Share your thoughts on what interesting things you've learned from completing the project.</p>
+
+    <h2 align="middle">Section I: Bezier Curves and Surfaces</h2>
+
+    <h3 align="middle">Part 1: Bezier curves with 1D de Casteljau subdivision</h3>
+    de Casteljau's algorithm involves taking successive midpoints defined by the paramter t, until there is only one, which is used to draw the bezier curve over many t values.  We implemented it by taking the initial vector of points, and calculate the aforementioned midpoints, which we return in a vector.
+
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/part1_1.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+          <td>
+            <img src="images/part1_2.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+        </tr>
+        <br>
+        <tr>
+          <td>
+            <img src="images/part1_3.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+          <td>
+            <img src="images/part1_4.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/part1_5.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+          <td>
+            <img src="images/part1_6.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+        </tr>
+        <br>
+        <tr>
+          <td>
+            <img src="images/part1_7.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+          <td>
+            <img src="images/part1_8.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+        </tr>
+      </table>
+    </div>
+
+
+    <h3 align="middle">Part 2: Bezier surfaces with separable 1D de Casteljau subdivision</h3>
+    In order to implement Bezier surfaces, we can start by running the 1D algorithm along one dimension with paramter u (instead of t), along each "row" of the grid. This gives us n points, which we can use to run the 1D algorithm again, but in the other direction using parameter v. Evaluating this for all u and v from 0 to 1, we end up with a continuous surface that abides by the same general principles as the 1D case, where the surface is "drawn" by considering where the final point is at each value of u and v.
+
+    <br><br>
+    <div align="middle"><img src="images/part2_teapot.png" align="middle" width="400px" /></div>
+
+    <h2 align="middle">Section II: Sampling</h2>
+
+    <h3 align="middle">Part 3: Average normals for half-edge meshes</h3>
+
+    The normal vectors computed for us were already area weighted because they were calculated by a cross-product.  Thus all we had to do was sum the vectors as usual, and normalize it at the end.
+
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/part3_1.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+          <td>
+            <img src="images/part3_2.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+        </tr>
+        <br>
+        <tr>
+          <td>
+            <img src="images/part3_3.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+          <td>
+            <img src="images/part3_4.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+        </tr>
+      </table>
+    </div>
+
+  </br>
+
+    On the left we have the original shading scheme, and on the right, Phong shading.  The effect is very apparent once the wireframe has been removed, as the color smoothing reduces drastically the noiceability of the small edges.
+
+
+    <h3 align="middle">Part 4: Half-edge flip</h3>
+
+    We implemented edge flip by first collecting all necessary half edges for the flip, and then using them to reassign certain pointers.  Because we simply moved the pointers to the original edge, an important part of this implementation was to reassign the half-edge pointers of both vertices from the edge that wa flipped.  We found this through debugging, because if not done, there is some chance those vertices would now be pointing to half-edges they are no longer adjacent to.
+
+    There were no interestin debugging steps for this part.  Initially there were some interesting errors, where consecutive flips of the same edge would appear to remove and return certain faces, but we solved these by thinking more closely about which pointers needed to be changed with regard to the mesh.
+
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/part4_1.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+          <td>
+            <img src="images/part4_2.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+        </tr>
+        <br>
+        <tr>
+          <td>
+            <img src="images/part4_3.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+          <td>
+            <img src="images/part4_4.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+        </tr>
+      </table>
+    </div>
+  </br>
+  <center>The teapot, shown with an increasing number of edge flips.
+
+    <h3 align="middle">Part 5: Half-edge split</h3>
+
+    We implemented split in a similar way to flip.  First we get pointers to all half-edges, vertices, and faces.  Then we go through and do a set of predefined operations to reassign all of their pointers.  A fun bug we ran into is when we replaced e->next() with (e++) because we thought these were equivalent.  This misconception led to the program crashing.
+
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/part5_1.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+          <td>
+            <img src="images/part5_2.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+        </tr>
+        <br>
+        <tr>
+          <td>
+            <img src="images/part5_3.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+          <td>
+            <img src="images/part5_4.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+        </tr>
+      </table>
+    </div>
+  </br>
+  <center> The first photo is the initial teapots, and progressive edges and splits are shown.
+
+    <h3 align="middle">Part 6: Loop subdivision for mesh upsampling</h3>
+
+    We followed the steps provided in order to perform loop subdivision.  The first step is to mark which vertices are old, so later we can use this when determining which edges to flip.  We then go through and calculate where new vertices will need to lie, and save the position in the edges.  Finally we do the procedure of splitting all original non-boundary edges, followed by flipping new edges between old and new vertices that were not part of original edges.
+
+    Generally shapes are smoothed out by loop subdivision, becoming higher res.  For smaller shapes, like the cube, it distorts the shape very far from its original form.
+
+    <br><br>
+    <div align="middle"><img src="images/part7_1.png" align="middle" width="400px" /></div>
+    <div align="middle"><img src="images/part7_2.png" align="middle" width="400px" /></div>
+
+    <br><br>
+
+    Here we see the cube splitting from its intitial configuration.
+
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/part8_1.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+          <td>
+            <img src="images/part8_2.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+        </tr>
+        <br>
+        <tr>
+          <td>
+            <img src="images/part8_3.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+          <td>
+            <img src="images/part8_4.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+        </tr>
+      </table>
+    </div>
+  </br>
+
+  The asymmetry is caused by the formatting of the edges in the initial cube, which are not as close to rotationally symmetric as it could be.  By trying to flip the edges to a more balanced pattern this effet can be reduced or increased.  This next attempt actually produces an even less symmetric shape.
+
+
+  <div align="middle">
+    <table style="width=100%">
+      <tr>
+        <td>
+          <img src="images/part8_5.png" align="middle" width="400px" />
+          <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+        </td>
+        <td>
+          <img src="images/part8_6.png" align="middle" width="400px" />
+          <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+        </td>
+      </tr>
+      <br>
+      <tr>
+        <td>
+          <img src="images/part8_7.png" align="middle" width="400px" />
+          <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+        </td>
+        <td>
+          <img src="images/part8_8.png" align="middle" width="400px" />
+          <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+        </td>
+      </tr>
+    </table>
+  </div>
+  </br>
+
+
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/part6_1.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+          <td>
+            <img src="images/part6_2.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+        </tr>
+        <br>
+        <tr>
+          <td>
+            <img src="images/glitch_cube.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+          <td>
+            <img src="images/spiky_ball.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+        </tr>
+        <br>
+        <tr>
+          <td>
+            <img src="images/part6_3.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+          <td>
+            <img src="images/part6_4.png" align="middle" width="400px" />
+            <!-- <figcaption align="middle">Caption goes here.</figcaption> -->
+          </td>
+        </tr>
+      </table>
+    </div>
+  </br>
+  <center> Some of the fun bugs we ran into, including a rather scary torus.
+
+    <h2 align="middle">Section III: Optional Extra Credit</h2>
+    <p>If you are not participating in the optional mesh competition, don't worry about this section!</p>
+
+    <h3 align="middle">Part 7: Design your own mesh!</h3>
+
+</body>
+
 </html>
