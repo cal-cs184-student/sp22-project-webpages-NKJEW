@@ -1,7 +1,139 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 3-2 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+    div.padded {
+      padding-top: 0px;
+      padding-right: 100px;
+      padding-bottom: 0.25in;
+      padding-left: 100px;
+    }
+  </style>
+<title>Nathan Jew, Cindy Wang  |  CS 184</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+</head>
+<body>
+<br />
+<h1 align="middle">Assignment 3: PathTracer</h1>
+    <h2 align="middle">Nathan Jew, Cindy Wang</h2>
+
+    <h2 align="middle">Overview</h2>
+    <p>For Part 1, the process was fairly straightforward (compared to project 3-1) since we felt familiar with the helper functions and the structure of BSDF classes. It took us a little bit of time to wrap our heads around the usage of the absolute value cosine, but in general, the math was fairly straightforward to implement, and we didn't run into too much trouble in this part. One issue we did run into though was calculating Schlick's reflection coefficient. At first, our glass sphere seemed to behave exactly like the mirror sphere, but this was because we were using normal cosine (instead of absolute value), resulting in the coefficient being much larger than 1, and therefore making the probability to refract 0.</p>
+
+    <p>For Part 4, we chose to do it because we were interested the experience of focusing on different "depths" and seeing how the rest of the image would behave, and in particular, found that it revealed a lot about the apparent scale of the models. We ended up rendering the keenan building model for our demonstration, since we thought that the segmented nature of it would allow us to focus on specific areas with very clear visual effect. However, we found that even slight changes to the focus distance and aperture size had drastic effects on our final image, leading us to believe that the building was actually quite small compared to, for example, the dragon. Implementing this section was fairly straightforward though, as we felt that we had a good understanding of what each vector was, and how it was represented with respect to the known values.</p>
+
+    <h2 align="middle">Part 1: Mirror and Glass Materials</h2>
+        <table style="width=100%" align="center">
+            <tr>
+                <td>
+                <img src="images/spheresm0.png" width="480px" />
+                <figcaption align="middle">CBspheres rendered with max depth 0</figcaption>
+                <td>
+                <img src="images/spheresm1.png" width="480px" />
+                <figcaption align="middle">CBspheres rendered with max depth 1</figcaption>
+            </tr>
+            <tr>
+                <td>
+                <img src="images/spheresm2.png" width="480px" />
+                <figcaption align="middle">CBspheres rendered with max depth 2</figcaption>
+                <td>
+                <img src="images/spheresm3.png" width="480px" />
+                <figcaption align="middle">CBspheres rendered with max depth 3</figcaption>
+            </tr>
+            <tr>
+                <td>
+                <img src="images/spheresm4.png" width="480px" />
+                <figcaption align="middle">CBspheres rendered with max depth 4</figcaption>
+                <td>
+                <img src="images/spheresm5.png" width="480px" />
+                <figcaption align="middle">CBspheres rendered with max depth 5</figcaption>
+            </tr>
+            <tr>
+                <td>
+                <img src="images/spheresm100.png" width="480px" />
+                <figcaption align="middle">CBspheres rendered with max depth 100</figcaption>
+            </tr>
+        </table>
+        <p>With depth 0, only the light sources are visible, for the same reason as before we implemented mirror/glass surfaces. This is because, by definition, non-light sources don't emit any light, so everything looks dark when we raycast.</p>
+
+        <p>With depth 1, the walls become lit, since they are illuminated by the light source. The mirror and glass surfaces appear mostly dark, but a reflection of the light source is visible, since it takes one bounce to go from the light, off the mirror (if we are reflecting), and then to the camera. In general, at a depth of n, the mirror reflects the scene at a depth n-1, because the mirror requires an extra bounce to reflect the light to the camera. In this case, the n-1 depth scene is the depth 0 dark scene, which is why both spheres look dark (except for the light).</p>
+
+        <p>With depth 2, the ceiling is illuminated (due to bounce lighting), and the mirrors finally reflect the scene, except without the ceiling (since it already takes 2 bounces to light the ceiling). The glass sphere's reflection is much darker than the mirror, because it only reflects probabilistically, and refracted light in this case does not appear.</p>
+
+        <p>With depth 3, the mirrored spheres reflect the ceiling as well, and the glass sphere now shows the refracted light from the rest of the scene (evidenced by the "warped" room we see inside). Also, the shadow now has a hole in it, since the light is able to pass through the glass sphere, off the floor, and then into the camera (rather than being perceived as being blocked by the sphere). One notable error is that the reflection of the glass sphere in the mirror sphere still appears dark, because that's what the glass sphere looked like at depth 2.</p>
+
+        <p>With depth 4, the issue of reflected glass sphere is resolved - the mirror now shows a more or less accurate reflection of the scene, with the glass sphere correctly colored. An additional light spot appears on the purple wall due to refracted light bouncing through the glass sphere.</p>
+
+        <p>With depth 5, the scene looks more or less the same, meaning that most of the artifacts resulting from there being too few bounces have been resolved by depth 4.</p>
+
+        <p>At depth 100, the most notable difference is that the ceiling in the glass sphere looks a bit brighter than it does at depth 5 and below.</p>
+
+    <h2 align="middle">Part 4: Depth of Field</h2>
+        <p>In the pinhole camera model, each point on the image comes from a single ray of light. This results in an
+            image without any sense of depth of field. In the thin-lens camera model, however, rays of light are refracted
+            through a lens and converge at a focal point. This means that areas of the image that are further from the
+            focal point will be out of focus, creating a sense of depth of field.</p>
+        <p>We chose to do our "focus stack" on keenan/building.dae; the multi-segmented bridge structure makes it easy
+            to distinguish different levels of focus/blur. Higher focus depths correspond to the point of focus being
+            further from the camera.</p>
+        <div>
+            <table align="center" style="width=100%">
+                <tr>
+                    <td>
+                        <img src="images/buildingd1.3.png" width="480px" />
+                        <figcaption align="middle">Focus depth of 1.3</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/buildingd1.7.png" width="480px" />
+                        <figcaption align="middle">Focus depth of 1.7</figcaption>
+                    </td>
+                <tr>
+                <tr>
+                    <td>
+                        <img src="images/buildingd2.2.png" width="480px" />
+                        <figcaption align="middle">Focus depth of 2.2</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/buildingd2.8.png" width="480px" />
+                        <figcaption align="middle">Focus depth of 2.8</figcaption>
+                    </td>
+                <tr>
+            </table>
+        </div>
+        <p>For comparison of different aperture sizes, we chose our point of focus to be towards the center of the bridge.
+            You can observe the differences in levels of blur at the front and back of the scene, where the two ends of
+            the bridge are. Higher aperture sizes are further from the pinhole camera model and result in more blur.</p>
+        <div>
+            <table align="center" style="width=100%">
+                <tr>
+                    <td>
+                        <img src="images/buildingb1.png" width="480px" />
+                        <figcaption align="middle">Aperture size of 0.01</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/buildingb2.png" width="480px" />
+                        <figcaption align="middle">Aperture size of 0.02</figcaption>
+                    </td>
+                <tr>
+                <tr>
+                    <td>
+                        <img src="images/buildingb5.png" width="480px" />
+                        <figcaption align="middle">Aperture size of 0.05</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/buildingb8.png" width="480px" />
+                        <figcaption align="middle">Aperture size of 0.08</figcaption>
+                    </td>
+                <tr>
+            </table>
+        </div>
+
+        <h2 align="middle">Collaboration</h2>
+        <p>We worked on this project after spring break, so our time was somewhat limited. However, we still managed to sync up for all of the sessions, and while we considered working on different parts independently (since they could each be completed separately), we decided that we would learn the most if we were both present for all parts. We did still split up the writeup work between the two of us, since we felt that we each could have reasonably written about either section.</p>
+
+        <h2 align="middle"><a href="https://cal-cs184-student.github.io/sp22-project-webpages-NKJEW/proj3-2/index.html">Website Link</a></h2>
+
+</div>
+</body>
 </html>
