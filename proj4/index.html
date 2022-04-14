@@ -1,7 +1,335 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 4 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+</style>
+<title>CS 184 Mesh Editor</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body>
+
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2022</h1>
+<h1 align="middle">Project 4: Cloth Simulator</h1>
+<h2 align="middle">Nathan Jew, Cindy Wang</h2>
+
+<br><br>
+
+<div>
+
+<h2 align="middle">Overview</h2>
+<p>In this project, we implemented a basic cloth simulation using a point mass/spring model, which was able to collide with basic geometry like spheres and planes, and could avoid clipping into itself. We also wrote some basic GPU shaders for the cloth, which allowed us to render it in various styles. Overall, nothing gave us too much trouble (except normalizing our shader vector4s as vector3s for the math to work out), but we still learned a lot about physical simulation and shader programs - both of which are areas which we hope will prove valuable in our final project.</p>
+
+<h2 align="middle">Part 1: Masses and Springs</h2>
+<p>Implementing this section was fairly straightforward, as it was just a matter of being cautious with our pointer arithmetic and the order in which we were iterating. We did forget to scale down our cloth, and for a long time we struggled to figure out why it seemed to be falling so slowly. It wouldn't be until about Part 3 (when we saw the sphere next to the plane) that we finally figured out what was wrong.</p>
+
+<table style="width=100%" align="center">
+    <tr>
+        <td>
+        <img src="images/part1/fullSheet.png" width="480px" />
+        <figcaption align="middle">The full cloth generated from pinned2.json</figcaption>
+    </tr>
+</table>
+
+<table style="width=100%" align="center">
+    <tr>
+        <td>
+        <img src="images/part1/constraints_noShearing.png" width="320px" />
+        <figcaption align="middle">The cloth without shearing constraints</figcaption>
+        <td>
+        <img src="images/part1/constraints_onlyShearing.png" width="320px" />
+        <figcaption align="middle">The cloth with only shearing constraints</figcaption>
+        <td>
+        <img src="images/part1/constraints_all.png" width="320px" />
+        <figcaption align="middle">The cloth with all constraints</figcaption>
+    </tr>
+</table>
+
+<h2 align="middle">Part 2: Simulation via Numerical Integration</h2>
+<p>When implementing this part, we took a lot of inspiration from the rope simulation from discussion. We did have to be somewhat cautious when applying the physics in each loop, but in general we didn't run into too much trouble as the formulas were pretty simple.</p>
+
+<table style="width=100%" align="center">
+    <tr>
+        <td>
+        <img src="images/part2/k_low.png" width="320px" />
+        <figcaption align="middle">Resting state with a <i>ks</i> = 100 N/m</figcaption>
+        <td>
+        <img src="images/part2/default.png" width="320px" />
+        <figcaption align="middle">Resting state with <i>ks</i> = 5000 N/m</figcaption>
+        <td>
+        <img src="images/part2/k_high.png" width="320px" />
+        <figcaption align="middle">Resting state with <i>ks</i> = 100000 N/m</figcaption>
+    </tr>
+</table>
+<p>With lower ks, the curve in the cloth dips lower and the crease is sharper. The cloth is a lot more flexible. With higher ks, the curve in the cloth is less pronounced and the cloth is more rigid; the springs in the cloth are stronger and more capable of maintaining the cloth’s shape.</p>
+
+<table style="width=100%" align="center">
+    <tr>
+        <td>
+        <img src="images/part2/density_low.png" width="320px" />
+        <figcaption align="middle">Resting state with density = 1 g/cm^2</figcaption>
+        <td>
+        <img src="images/part2/default.png" width="320px" />
+        <figcaption align="middle">Resting state with density = 15 g/cm^2</figcaption>
+        <td>
+        <img src="images/part2/density_high.png" width="320px" />
+        <figcaption align="middle">Resting state with density = 100 g/cm^2</figcaption>
+    </tr>
+</table>
+
+<p>Results with low density are similar to those with high ks: the curve in the cloth is less pronounced and the creases are less sharp. Results with high density are similar to those with low ks: the curve in the cloth hangs lower and the dip is wider with a sharper crease. When density is higher, the cloth has more “weight” to it and exerts more weight on the springs.</p>
+
+<table style="width=100%" align="center">
+    <tr>
+        <td>
+        <img src="images/part2/damping_zero1.png" width="320px" />
+        <figcaption align="middle">The cloth flying with 0 damping</figcaption>
+        <td>
+        <img src="images/part2/damping_zero2.png" width="320px" />
+        <figcaption align="middle">...still going</figcaption>
+    </tr>
+</table>
+
+<table style="width=100%" align="center">
+    <tr>
+        <td>
+        <img src="images/part2/damping_high1.png" width="320px" />
+        <figcaption align="middle">The cloth drifting with high damping</figcaption>
+        <td>
+        <img src="images/part2/damping_high2.png" width="320px" />
+        <figcaption align="middle">Resting state with higher damping</figcaption>
+    </tr>
+</table>
+
+<p>With 0 damping, the cloth has no resistance to motion and continues swinging widely for a long time after initially being released. Within the cloth, the surface is also less smooth; there is more internal movement within the mesh of the cloth. When damping is high, the cloth falls slowly from the initial position to the final resting position. The final resting position still looks like it would without high damping, but it takes a very long time to reach this position.</p>
+
+<h2 align="middle">Part 3: Handling Collisions with Other Objects</h2>
+<p>When working on this section, we noticed a few similarities to raytracing in terms of dealing with "collision" points. But otherwise we didn't run into too many complications. One moment of concern was when our plane collisions seemingly launched the cloth into the stratosphere, but we eventually figured out that our corrective factor needed to use a normalized direction vector.</p>
+
+<table style="width=100%" align="center">
+    <tr>
+        <td>
+        <img src="images/part3/sphere_low.png" width="320px" />
+        <figcaption align="middle">Resting state with low <i>ks</i></figcaption>
+        <td>
+        <img src="images/part3/sphere_default.png" width="320px" />
+        <figcaption align="middle">Resting state with default <i>ks</i></figcaption>
+        <td>
+        <img src="images/part3/sphere_high.png" width="320px" />
+        <figcaption align="middle">Resting state with high <i>ks</i></figcaption>
+    </tr>
+</table>
+
+<p>The higher ks is, the more rigid the cloth is. With low ks, we can see that the ends of the cloth are hanging vertically down and the folds in the cloth are finer. As ks increases, the edges of the cloth stick up more and there are fewer folds. The folds in the cloth also start from higher up on the sphere; overall, the cloth hugs the sphere less.</p>
+
+<table style="width=100%" align="center">
+    <tr>
+        <td>
+        <img src="images/part3/plane.png" width="480px" />
+        <figcaption align="middle">The cloth chilling on a plane</figcaption>
+    </tr>
+</table>
+
+<h2 align="middle">Part 4: Handling Self-Collisions</h2>
+<table style="width=100%" align="center">
+    <tr>
+        <td>
+        <img src="images/part4/collision_start.png" width="320px" />
+        <figcaption align="middle">The cloth just starting to fall</figcaption>
+        <td>
+        <img src="images/part4/collision_early.png" width="320px" />
+        <figcaption align="middle">An early self-collision as the cloth is falling</figcaption>
+        <td>
+        <img src="images/part4/collision_resting.png" width="320px" />
+        <figcaption align="middle">The resting state of the cloth</figcaption>
+    </tr>
+</table>
+
+<table style="width=100%" align="center">
+    <tr>
+        <td>
+        <img src="images/part4/density_low.png" width="320px" />
+        <figcaption align="middle">Falling cloth with low density</figcaption>
+        <td>
+        <img src="images/part4/default.png" width="320px" />
+        <figcaption align="middle">Falling cloth with default density</figcaption>
+        <td>
+        <img src="images/part4/density_high.png" width="320px" />
+        <figcaption align="middle">Falling cloth with high density</figcaption>
+    </tr>
+</table>
+
+<p>When density is lower, the cloth makes wider movements and the creases in the cloth surface are larger. With higher density, the cloth surface is less smooth and the cloth spreads out less horizontally as it falls.</p>
+
+<table style="width=100%" align="center">
+    <tr>
+        <td>
+        <img src="images/part4/k_low.png" width="320px" />
+        <figcaption align="middle">Falling cloth with a low <i>ks</i></figcaption>
+        <td>
+        <img src="images/part4/default.png" width="320px" />
+        <figcaption align="middle">Falling cloth with default <i>ks</i></figcaption>
+        <td>
+        <img src="images/part4/k_high.png" width="320px" />
+        <figcaption align="middle">Falling cloth with a high <i>ks</i></figcaption>
+    </tr>
+</table>
+
+<p>For low ks, results are similar to those for high density: the ripples in the cloth surface are finer and it spreads out less as it falls. For high ks, the surface of the cloth is smoother and the folds in the cloth are larger and more well-defined.</p>
+
+<h2 align="middle">Part 5: Shaders</h2>
+<p>This section definitely took us the longest to implement, simply due to our inexperience with shader programs. However, once we eventually got the hang of the quirks of the language, we had a great time experimenting with lighting effects, and just seeing how quickly and easily these shaders could be pumped out - and to such visually striking effect.</p>
+
+<p>Now onto the writeup. A shader program is usually a simple set of extremely parallelizable computations which describe how a scene gets visualized on screen. These shaders can be applied at the vertex level or the fragment level, although they do not alter anything in the underlying scene - just how it is perceived. Vertex shaders alter the perceived location of vertices (most notably utilized in the displacement shader), which allow meshes to be visually more detailed without actually being so complex under the surface. Fragment shaders, meanwhile, determine what gets rendered at each pixel location, which can be similarly modified to produce a variety of effects given the input parameters (e.g. surface normal, uv coordinate). As such, shaders can create the illusion of complex lighting, or can be used to apply textures and small surface imperfections.</p>
+
+<table style="width=100%" align="center">
+    <tr>
+        <td>
+        <img src="images/part5/phong_ambient.png" width="320px" />
+        <figcaption align="middle">Ambient light only</figcaption>
+        <td>
+        <img src="images/part5/phong_diffuse.png" width="320px" />
+        <figcaption align="middle">Diffuse shading only</figcaption>
+        <td>
+        <img src="images/part5/phong_specular.png" width="320px" />
+        <figcaption align="middle">Specular highlights only</figcaption>
+    </tr>
+</table>
+
+<table style="width=100%" align="center">
+    <tr>
+        <td>
+        <img src="images/part5/phong_all.png" width="320px" />
+        <figcaption align="middle">Putting it all together!</figcaption>
+        <td>
+        <img src="images/part5/phong_all2.png" width="320px" />
+        <figcaption align="middle">Another look, from another angle</figcaption>
+    </tr>
+</table>
+
+<p>The Blinn-Phong shading model is able to render smooth surfaces with a variable amount of “shininess”, which it does by simplifying light interactions into three types: ambient light, diffuse light, and specular highlights. Ambient lighting ensures that areas which are not directly lit are not completely dark, by adding a constant amount of light to all surfaces regardless of light location. Diffuse lighting ensures that surfaces are lit when the light does hit them, by applying a flat color to surfaces with intensity proportional to the distance and angle of the light. Finally, specular highlights add the white “circle” which is visible on the sphere, simulating the idea that some of the light bounces off of the surface and straight into the camera. Put together, these create a passable model for simple shiny surfaces.</p>
+
+<table style="width=100%" align="center">
+    <tr>
+        <td>
+        <img src="images/part5/textureRef1.png" width="480px" />
+        <figcaption align="middle">The texture we used for texture mapping</figcaption>
+    </tr>
+</table>
+
+<table style="width=100%" align="center">
+    <tr>
+        <td>
+        <img src="images/part5/texture_default.png" width="320px" />
+        <figcaption align="middle">The fallen cloth with texture mapping</figcaption>
+        <td>
+        <img src="images/part5/texture_alt.png" width="320px" />
+        <figcaption align="middle">Another look, from another angle</figcaption>
+    </tr>
+</table>
+
+<p>Originally, we thought it would be amusing if our texture was the code that we used to implement the shader itself (i.e. our Texture.frag file). But then we realized that that probably violated academic integrity in some form, and instead opted to pull from a generic part of the starter code.</p>
+
+<table style="width=100%" align="center">
+    <tr>
+        <td>
+        <img src="images/part5/textureRef2.png" width="480px" />
+        <figcaption align="middle">The texture we used for bump shading</figcaption>
+    </tr>
+</table>
+
+<table style="width=100%" align="center">
+    <tr>
+        <td>
+        <img src="images/part5/bump_cloth.png" width="320px" />
+        <figcaption align="middle">Bump shading on the cloth</figcaption>
+        <td>
+        <td>
+        <img src="images/part5/displacement_cloth.png" width="320px" />
+        <figcaption align="middle">Displacement shading on the cloth</figcaption>
+    </tr>
+    <tr>
+        <td>
+        <img src="images/part5/bump_fallen.png" width="320px" />
+        <figcaption align="middle">Bump shading on the fallen cloth</figcaption>
+        <td>
+        <td>
+        <img src="images/part5/displacement_fallen.png" width="320px" />
+        <figcaption align="middle">Displacement shading on the fallen cloth</figcaption>
+    </tr>
+    <tr>
+        <td>
+        <img src="images/part5/bump_lowres.png" width="320px" />
+        <figcaption align="middle">Bump shading on a low-res sphere</figcaption>
+        <td>
+        <td>
+        <img src="images/part5/displacement_lowres.png" width="320px" />
+        <figcaption align="middle">Displacement shading on a low-res sphere</figcaption>
+    </tr>
+    <tr>
+        <td>
+        <img src="images/part5/bump_highres.png" width="320px" />
+        <figcaption align="middle">Bump shading on a high-res sphere</figcaption>
+        <td>
+        <td>
+        <img src="images/part5/displacement_highres.png" width="320px" />
+        <figcaption align="middle">Displacement shading on a high-res sphere</figcaption>
+    </tr>
+</table>
+
+<p>In general, both bump shading and displacement shading give the effect of having the text “pop out” of the surface, instead of being completely smooth like the texture mapping. Notably, there seem to be slight shadows around the borders of each letter, almost as though the surface itself has that level of detail. However, only with the displacement mapping does this actually affect the shape of the mesh (most visible in the high-res sphere image), since the “outline” of the sphere has visible perturbations (in contrast with the bump mapping, which is still perfectly smooth). However, the effect of the displacement mapping works best with the mesh itself is high resolution, since it is applied per vertex. For example, the low-res sphere has almost no visible deformations because the vertices are too sparse. The bump shading, though, is unaffected by the resolution of the sphere.</p>
+
+<table style="width=100%" align="center">
+    <tr>
+        <td>
+        <img src="images/part5/mirror_sphere.png" width="320px" />
+        <figcaption align="middle">Mirror shading on the sphere</figcaption>
+        <td>
+        <img src="images/part5/mirror_both.png" width="320px" />
+        <figcaption align="middle">Mirror shading pre-fall</figcaption>
+        <td>
+        <img src="images/part5/mirror_fallen.png" width="320px" />
+        <figcaption align="middle">Mirror shading on the fallen cloth</figcaption>
+    </tr>
+</table>
+
+<p>For our custom shaders, we tried two different ideas.</p>
+
+<table style="width=100%" align="center">
+    <tr>
+        <td>
+        <img src="images/part5/custom1.png" width="480px" />
+        <figcaption align="middle">A "blocky" shader</figcaption>
+    </tr>
+</table>
+
+<p>The first is a “blocky” shader, which is based on the displacement shader. It rounds down the vertex positions to a grid-like structure, resulting in a mesh which is seemingly composed of blocks - even though in reality it is still a sphere.</p>
+
+<table style="width=100%" align="center">
+    <tr>
+        <td>
+        <img src="images/part5/custom2.png" width="480px" />
+        <figcaption align="middle">A shader which combines many shaders</figcaption>
+    </tr>
+</table>
+
+<p>The second is an amalgamation shader, which applies Blinn-Phong shading to a texture. Notably though, we wanted the text to still be visible on all sides of the cloth, so the text is essentially always lit, leaving the rest of the cloth to have a slightly different, more reflective material which still reacts to the light. There’s also a bit of bump shading applied to help differentiate the text from the surface.</p>
+
+<h2 align="center"><a href="https://cal-cs184-student.github.io/sp22-project-webpages-NKJEW/proj4/index.html">Website Link</a></h2>
+
+</body>
 </html>
