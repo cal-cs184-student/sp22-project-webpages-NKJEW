@@ -1,15 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<h1>Milestone Report (Week 1)</h1>
+<h1 align="center">Milestone Report (Week 1)</h1>
 
-</p>
-      We started our project from the starter code of project 4, as it has a good framework for the visualizations we are planning to implement.  So far we have created the framework for the particle simulation and their interactions.  Currently we have coded only simple attraction and repulsion interactions, but have added the ability for multiple particle types to interact in different ways.
+<div style="padding:0px 75px">
 <p>
+      We started our project from the starter code of project 4, as it has a good framework for the visualizations we are planning to implement.  So far we have created the framework for the particle simulation and their interactions.  Currently we have coded only simple attraction and repulsion interactions, but have added the ability for multiple particle types to interact in different ways.
 </p>
+
+
+    <table align="center" style="width=100%">
+        <tr>
+            <td>
+                <img src="images/multiparticle.png" width="480px" />
+                <figcaption align="middle">The "stable" state of a three-particle system</figcaption>
+            </td>
+            <td>
+                <img src="images/protonneutron.png" width="480px" />
+                <figcaption align="middle">The "stable" state of a mock proton/neutron simulation</figcaption>
+            </td>
+        <tr>
+    </table>
+
+<p>
 We have not implemented marching cubes, so for visualization we started with using the default cloth linking for appearance.  This worked on some level, but for more clarity we replaced this by rendering a triangle for each particle.  We use normal shading and orient them to have their normal pointing outward from the centroid of all particles to provide a surface appearance.  In week 2 we will implement marching cubes and no longer use this temporary solution.
 </p>
-</p>
+
+<h3 align="center">Example Simulations</h3>
+
+<p>
 In terms of simulations we have run several variations on the premise of gravitational attraction and repulsion, with physics computed by verlet integration.
 <ol>
   <li>For the first simulation we set only the attraction force to be present.  We did this with the idea that the particles would collapse into a small sphere and sit at rest.  WIthout particle collision, however, when they got close they would accelerate each other to infinity.  While we plan to add collisions, for now we stop computing force when particles are close to each other.  This produced the results we expected, with the particles all collapsing until they found a stable equilibrium where they were all within the force exclusion radius of every other particle.</li>
@@ -19,17 +38,31 @@ In terms of simulations we have run several variations on the premise of gravita
 
     </li>
 </ol>
+
+<table align="center" style="width=100%">
+        <td>
+    <img src="images/attractonly.png" height="320px"/>
+    <figcaption align="middle">Only attraction forces</figcaption>
+      </td>
+      <td>
+          <img src="images/repulsealso.png" height="320px"/>
+          <figcaption align="middle">Added repulsion forces (sphere is larger)</figcaption>
+      </td>
+      <td>
+          <img src="images/twoparti.png" height="320px"/>
+          <figcaption align="middle">Two particle system</figcaption>
+      </td>
+  </table>
+
+  <br>
+
 We are on schedule after 1 week, having finished the particle simulation.  There are a few more particle interactions we plan to add, but they will be added as needed during our work on the other parts of this project.  So the only update to the plan is continued particle sim updates alongside our other work.
-
-<br>
-
-Link to project Slides:
-<a href="https://docs.google.com/presentation/d/1I7hs4LOZvKb682F74LPXT1UR5c76FfQdJQVYPdnM33k/edit?usp=sharing">Project Slides</a>
-
-<br>
-
-Link to demo video:
-<a href="https://youtu.be/Pxqq10v6SXc">Video demo</a>
-
 </p>
+
+
+<h2 align="center"><a href="https://docs.google.com/presentation/d/1I7hs4LOZvKb682F74LPXT1UR5c76FfQdJQVYPdnM33k/edit?usp=sharing">Project Slides</a></h2>
+
+<h2 align="center"><a href="https://youtu.be/Pxqq10v6SXc">Video Demo</a></h2>
+
+</div>
 </html>
